@@ -107,13 +107,16 @@ class DeviceProfileManager:
             return {}
     
     def _get_location_data(self) -> Dict[str, Any]:
-        """Get GPS location data."""
+        """Get GPS location data and geo coordinates."""
         try:
             location = {
                 "gps_enabled": False,
                 "latitude": None,
                 "longitude": None,
                 "accuracy": None,
+                "altitude": None,
+                "provider": None,
+                "last_known_location": None,
             }
             
             # Check if GPS is enabled
@@ -121,13 +124,141 @@ class DeviceProfileManager:
             if gps_result and gps_result.strip() != '0':
                 location['gps_enabled'] = True
             
-            # Try to get last known location
-            loc_result = self.adb_manager.execute_adb_command("shell getprop ro.gnss.gps")
+            # Get last known location from GPS provider
+            gps_loc = self._extract_gps_coordinates()
+            if gps_loc:
+                location.update(gps_loc)
+                location['provider'] = 'GPS'
+                return location
+            
+            # Try network provider
+            network_loc = self._extract_network_location()
+            if network_loc:
+                location.update(network_loc)
+                location['provider'] = 'Network'
+                return location
+            
+            # Try to get location from any available provider
+            all_loc = self._get_all_available_locations()
+            if all_loc:
+                location.update(all_loc)
+                return location
             
             return location
         except Exception as e:
             log_info(f"Location data error: {str(e)}")
             return {}
+    
+    def _extract_gps_coordinates(self) -> Optional[Dict[str, Any]]:
+        """Extract GPS coordinates from device."""
+        try:
+            # Try to get location via dumpsys
+            result = self.adb_manager.execute_adb_command(
+                "shell dumpsys location | grep -A 10 'fused location'"
+            )
+            
+            if result and 'latitude' in result.lower():
+                coords = self._parse_coordinates_from_string(result)
+                if coords:
+                    return coords
+            
+            # Try alternative method
+            result = self.adb_manager.execute_adb_command(
+                "shell getprop ro.location"
+            )
+            if result:
+                coords = self._parse_coordinates_from_string(result)
+                if coords:
+                    return coords
+            
+            return None
+        except Exception as e:
+            log_info(f"GPS extraction error: {str(e)}")
+            return None
+    
+    def _extract_network_location(self) -> Optional[Dict[str, Any]]:
+        """Extract network-based location."""
+        try:
+            # Try to get network location from location services
+            result = self.adb_manager.execute_adb_command(
+                "shell dumpsys location | grep -A 5 'network location provider'"
+            )
+            
+            if result:
+                coords = self._parse_coordinates_from_string(result)
+                if coords:
+                    return coords
+            
+            return None
+        except Exception as e:
+            log_info(f"Network location extraction error: {str(e)}")
+            return None
+    
+    def _get_all_available_locations(self) -> Optional[Dict[str, Any]]:
+        """Get all available location information from device."""
+        try:
+            result = self.adb_manager.execute_adb_command(
+                "shell dumpsys location"
+            )
+            
+            if result:
+                # Look for any latitude/longitude in the output
+                coords = self._parse_coordinates_from_string(result)
+                if coords:
+                    return coords
+            
+            return None
+        except Exception as e:
+            log_info(f"Location services error: {str(e)}")
+            return None
+    
+    def _parse_coordinates_from_string(self, text: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse latitude, longitude, and other coordinates from text.
+        
+        Args:
+            text: Text containing coordinate data
+            
+        Returns:
+            Dictionary with parsed coordinates or None
+        """
+        import re
+        
+        coords = {}
+        
+        # Try to find latitude
+        lat_match = re.search(r'latitude[=:\s]+(-?\d+\.?\d*)', text, re.IGNORECASE)
+        if lat_match:
+            try:
+                coords['latitude'] = float(lat_match.group(1))
+            except ValueError:
+                pass
+        
+        # Try to find longitude
+        lon_match = re.search(r'longitude[=:\s]+(-?\d+\.?\d*)', text, re.IGNORECASE)
+        if lon_match:
+            try:
+                coords['longitude'] = float(lon_match.group(1))
+            except ValueError:
+                pass
+        
+        # Try to find accuracy
+        acc_match = re.search(r'accuracy[=:\s]+(\d+\.?\d*)', text, re.IGNORECASE)
+        if acc_match:
+            try:
+                coords['accuracy'] = float(acc_match.group(1))
+            except ValueError:
+                pass
+        
+        # Try to find altitude
+        alt_match = re.search(r'altitude[=:\s]+(-?\d+\.?\d*)', text, re.IGNORECASE)
+        if alt_match:
+            try:
+                coords['altitude'] = float(alt_match.group(1))
+            except ValueError:
+                pass
+        
+        return coords if coords else None
     
     def _get_hardware_specs(self) -> Dict[str, str]:
         """Get hardware specifications."""
@@ -384,11 +515,15 @@ class DeviceProfileManager:
                 </div>
                 
                 <div class="section">
-                    <div class="section-title">Location & GPS</div>
+                    <div class="section-title">Location & GPS Coordinates</div>
                     <div class="data-grid">
                         <div class="data-item">
                             <div class="data-label">GPS Status</div>
                             <div class="data-value">{'✓ Enabled' if location.get('gps_enabled') else '✗ Disabled'}</div>
+                        </div>
+                        <div class="data-item">
+                            <div class="data-label">Location Provider</div>
+                            <div class="data-value">{location.get('provider', 'Unknown')}</div>
                         </div>
                         <div class="data-item">
                             <div class="data-label">Latitude</div>
@@ -399,9 +534,19 @@ class DeviceProfileManager:
                             <div class="data-value">{location.get('longitude', 'N/A')}</div>
                         </div>
                         <div class="data-item">
-                            <div class="data-label">Accuracy</div>
-                            <div class="data-value">{location.get('accuracy', 'N/A')}</div>
+                            <div class="data-label">Altitude</div>
+                            <div class="data-value">{location.get('altitude', 'N/A')} meters</div>
                         </div>
+                        <div class="data-item">
+                            <div class="data-label">Accuracy</div>
+                            <div class="data-value">{location.get('accuracy', 'N/A')} meters</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; padding: 12px; background: #2a2e37; border-radius: 5px; border-left: 3px solid #00ff00;">
+                        <strong style="color: #00ff00;">Geo Coordinates:</strong><br>
+                        <span style="color: #888; font-size: 12px;">
+                            {f"{location.get('latitude', 'N/A')}, {location.get('longitude', 'N/A')}" if location.get('latitude') and location.get('longitude') else "Location data not available"}
+                        </span>
                     </div>
                 </div>
                 

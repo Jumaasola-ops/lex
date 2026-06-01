@@ -974,6 +974,12 @@ class CommandInterface:
             if qr_path:
                 print(f"📲 Or scan this QR code: {qr_path}\n")
             
+            print_section_header("LIVE LOCATION DASHBOARD")
+            dashboard_url = f"{server_url}/dashboard"
+            print(f"\n📊 Monitor device locations in real-time:\n")
+            print(f"   {dashboard_url}\n")
+            print_info("Open this URL on your computer to see a live map of all connected devices with GPS coordinates.\n")
+            
             print_section_header("IMPORTANT INSTRUCTIONS")
             print_info("\n1. Open the link on ANY device (phone, tablet, etc.)")
             print_info("2. Allow location/geolocation when prompted")
