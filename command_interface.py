@@ -113,7 +113,7 @@ class CommandInterface:
             return False
         
         try:
-            if command != "help" and not self.adb:
+            if command not in ["help", "create-profile"] and not self.adb:
                 if not self.initialize():
                     return False
             
