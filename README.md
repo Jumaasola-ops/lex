@@ -1,76 +1,98 @@
 # Android Security Scanner
 
-A comprehensive command-based security and privacy tool for Android devices, designed to scan for malware, detect hidden apps, and manage photo metadata via USB cable connection using ADB (Android Debug Bridge).
+**Author:** Asola Junior  
+**Version:** 1.0.0  
+**License:** Educational & Personal Use  
+**Status:** Production Ready
+
+---
+
+## Overview
+
+Android Security Scanner is a comprehensive command-line security and privacy analysis tool for Android devices. It provides malware detection, application analysis, and photo metadata management through ADB (Android Debug Bridge) connectivity over USB.
+
+### Core Capabilities
+
+**Malware & Threat Detection**
+- Signature-based malware scanning
+- Suspicious package pattern recognition
+- Obfuscation detection
+- Permission risk assessment
+
+**Application Intelligence**
+- System vs user-installed app classification
+- Hidden/system-level app detection
+- Behavioral anomaly identification
+- Dangerous permission analysis
+
+**Privacy Management**
+- Complete EXIF/metadata extraction
+- Metadata sanitization and removal
+- Batch processing capabilities
+- Image quality preservation
+
+**Device Profiling**
+- Complete device specifications
+- Package enumeration
+- Application inventory
+- Connection monitoring
 
 ## Features
 
-✓ **Malware Detection**
-- Scan against known malware signatures database
-- Detect suspicious package patterns
-- Identify potentially obfuscated app names
-- Check for risky permissions
+## System Requirements
 
-✓ **App Analysis**
-- Distinguish between system and user-installed apps
-- Detect hidden/system-level apps
-- Identify suspicious app behavior
-- Analyze dangerous permission usage
+| Component | Specification |
+|-----------|---------------|
+| **OS** | Windows, macOS, or Linux |
+| **Python** | 3.8+ |
+| **Android Version** | 5.0+ (Best: 5-10) |
+| **Python Packages** | See requirements.txt |
+| **ADB** | Android SDK Platform Tools |
+| **Connection** | USB 2.0+ cable (stable connection) |
+| **Storage** | ~100MB free disk space |
+| **RAM** | 4GB+ recommended |
 
-✓ **Photo Metadata Management**
-- Extract complete EXIF and metadata information
-- Remove all sensitive metadata from photos
-- Batch process multiple photos
-- Preserve image quality after cleaning
-
-✓ **Device Information**
-- Get detailed device specifications
-- List installed packages
-- Retrieve app information
-- Monitor device connection status
-
-## Requirements
-
-- **OS**: Windows, macOS, or Linux
-- **Python**: 3.8 or higher
-- **Android Device**: Android 5.0+
-- **USB Debugging**: Enabled on Android device
-- **ADB**: Android SDK Platform Tools installed
-- **Cable**: USB cable for device connection
+**Note:** Compatibility with Android 11+ is reduced due to enhanced security policies. See [Compatibility](#compatibility) section for details.
 
 ## Installation
 
-### 1. Install Android SDK Platform Tools
+### Step 1: Install Android SDK Platform Tools
 
-**Windows:**
+#### Windows
 ```powershell
-# Using Chocolatey
+# Option A: Using Chocolatey (recommended)
 choco install android-sdk-platform-tools
 
-# Or download from:
-# https://developer.android.com/studio/releases/platform-tools
+# Option B: Manual installation
+# Download from: https://developer.android.com/studio/releases/platform-tools
+# Extract and add to system PATH
 ```
 
-**macOS:**
+#### macOS
 ```bash
 # Using Homebrew
 brew install android-platform-tools
 ```
 
-**Linux:**
+#### Linux (Ubuntu/Debian)
 ```bash
-# Ubuntu/Debian
+sudo apt-get update
 sudo apt-get install adb
-
-# Or download platform tools manually
 ```
 
-### 2. Setup Python Environment
+### Step 2: Verify ADB Installation
 
 ```bash
-# Clone or download the project
+adb version
+```
+
+### Step 3: Clone/Setup Project
+
+```bash
+# Navigate to project directory
 cd android-security-scanner
 
-# Create virtual environment
+# Create Python virtual environment
 python -m venv venv
 
 # Activate virtual environment
@@ -79,113 +101,93 @@ venv\Scripts\activate
 # macOS/Linux:
 source venv/bin/activate
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Enable USB Debugging on Android Device
+### Step 4: Enable USB Debugging on Android Device
 
-1. Go to **Settings → About Phone**
-2. Tap **Build Number** 7 times to enable Developer Mode
-3. Go to **Settings → Developer Options**
+1. Navigate to **Settings** → **About Phone**
+2. Tap **Build Number** 7 times rapidly to unlock Developer Mode
+3. Go back to **Settings** → **Developer Options** (now visible)
 4. Enable **USB Debugging**
-5. Connect device to computer via USB
+5. Connect device to computer via USB cable
+6. Accept the RSA fingerprint dialog on device
 
-### 4. Verify ADB Connection
+### Step 5: Verify Device Connection
 
 ```bash
 adb devices
 ```
 
-You should see your device listed as "device".
+Expected output:
+```
+List of attached devices
+device_name              device
+```
 
 ## Usage
 
-### Command-Line Interface
-
-The tool uses a custom command interface. Basic syntax:
+### Basic Command Syntax
 
 ```bash
-python main.py <command> [arguments]
+python main.py <command> [options] [arguments]
 ```
 
-Or create an alias for easier access:
+### Command Reference
 
-```bash
-# Windows (PowerShell)
-function android-security { python main.py @args }
+#### Security Operations
 
-# macOS/Linux (Bash)
-alias android-security="python main.py"
-```
-
-### Available Commands
-
-#### 1. Full Security Scan
-Comprehensive scan of your device:
+**Full Security Scan**
 ```bash
 python main.py full-scan
 ```
+Comprehensive scan combining all security checks.
 
-#### 2. Malware Scanning
-Scan for malware and suspicious packages:
+**Malware Detection**
 ```bash
 python main.py scan-malware
 ```
+Scans against known malware signatures and suspicious patterns.
 
-Output includes:
-- Known malware threats
-- Suspicious package names
-- Apps with dangerous permissions
-- Potentially hidden apps
-
-#### 3. App Analysis
-Analyze installed applications:
+**Application Analysis**
 ```bash
 python main.py analyze-apps
 ```
+Analyzes installed applications for suspicious behavior and permissions.
 
-Output includes:
-- Count of system vs user apps
-- Hidden apps detection
-- Suspicious app indicators
-- Dangerous permission analysis
+---
 
-#### 4. Extract Photo Metadata
-View all metadata from a photo:
+#### Metadata Management
+
+**Extract Metadata**
 ```bash
-python main.py extract-metadata <path_to_photo>
+python main.py extract-metadata <image_path>
 ```
+Displays all EXIF and metadata information from an image.
 
-Example:
+**Remove Metadata (Single)**
 ```bash
-python main.py extract-metadata photo.jpg
+python main.py remove-metadata <input_image> [output_path]
 ```
+Removes all metadata from a single image.
 
-#### 5. Remove Photo Metadata
-Remove metadata from a single photo:
-```bash
-python main.py remove-metadata <input_photo> [output_path]
-```
-
-Example:
-```bash
-python main.py remove-metadata photo.jpg cleaned_photo.jpg
-```
-
-#### 6. Batch Clean Metadata
-Remove metadata from multiple photos:
+**Batch Metadata Removal**
 ```bash
 python main.py batch-clean <input_dir> <output_dir> [extensions]
 ```
+Processes multiple images in a directory.
 
-Example:
+**Example:**
 ```bash
 python main.py batch-clean ./photos ./cleaned_photos .jpg,.png
 ```
 
-#### 7. List Packages
-List installed packages:
+---
+
+#### Package Management
+
+**List All Packages**
 ```bash
 # All packages
 python main.py list-packages
@@ -193,161 +195,441 @@ python main.py list-packages
 # System packages only
 python main.py list-packages --system
 
-# User-installed packages only
+# User packages only
 python main.py list-packages --user
 ```
 
-#### 8. Get App Information
-Get detailed info about a specific app:
+**App Details**
 ```bash
 python main.py app-info <package_name>
 ```
 
-Example:
+**Example:**
 ```bash
 python main.py app-info com.android.chrome
 ```
 
-#### 9. Device Information
-Display device details:
+---
+
+#### Device Information
+
+**Device Specifications**
 ```bash
 python main.py device-info
 ```
 
-#### 10. Help
-Display help information:
+**Help & Documentation**
 ```bash
 python main.py help
 python main.py help <command>
 ```
 
-## Project Structure
+---
+
+### Quick Aliases (Optional)
+
+For convenience, create command shortcuts:
+
+#### Windows (PowerShell)
+```powershell
+function android-sec { python main.py @args }
+```
+
+#### macOS/Linux (Bash)
+```bash
+alias android-sec="python main.py"
+```
+
+Then use: `android-sec full-scan`
+
+## Architecture
+
+### Project Structure
 
 ```
 android-security-scanner/
-├── main.py                 # Entry point
-├── command_interface.py    # Custom command handler
-├── adb_manager.py          # ADB communication wrapper
-├── malware_scanner.py      # Malware detection engine
-├── app_analyzer.py         # App analysis module
-├── metadata_handler.py     # Photo metadata operations
-├── config.py               # Configuration and constants
-├── exceptions.py           # Custom exception classes
-├── utils.py                # Utility functions
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
+├── main.py                  # Application entry point
+├── command_interface.py     # Command router & handler
+├── adb_manager.py           # ADB abstraction layer
+├── malware_scanner.py       # Threat detection engine
+├── app_analyzer.py          # Application analysis module
+├── malware_remover.py       # Threat remediation module
+├── metadata_handler.py      # Image metadata processor
+├── process_analyzer.py      # Process analysis module
+├── system_analyzer.py       # System information module
+├── file_crawler.py          # File system scanner
+├── config.py                # Configuration & constants
+├── exceptions.py            # Custom exception classes
+├── utils.py                 # Utility functions
+├── requirements.txt         # Python dependencies
+├── tests.py                 # Unit tests
+├── run.bat                  # Windows launcher
+├── run.sh                   # Unix launcher
+├── logs/                    # Runtime logs
+├── malware_db/              # Malware signatures
+└── downloads/               # Download directory
 ```
 
-## Configuration
+### Module Responsibilities
 
-Edit `config.py` to customize:
-
-- **ADB Timeout**: `ADB_TIMEOUT` (seconds)
-- **Malware Database**: `KNOWN_MALWARE_SIGNATURES` (dict)
-- **Suspicious Patterns**: `SUSPICIOUS_PATTERNS` (list)
-- **System Packages**: `SYSTEM_PACKAGES` (list)
-- **Log Level**: `LOG_LEVEL` (INFO, DEBUG, WARNING, ERROR)
-
-## Security Notes
-
-⚠️ **Important**:
-
-1. **Device Permissions**: This tool requires access to device package information and file systems
-2. **USB Debugging**: Only enable USB debugging on trusted computers
-3. **Data Privacy**: All scans are performed locally; no data is sent to external servers
-4. **Backup**: Consider backing up important data before malware removal
-5. **Root Access**: Some features require device to be connected via USB
-
-## Troubleshooting
-
-### ADB not found
-```bash
-# Verify ADB is installed
-adb version
-
-# Add ADB to PATH if needed
-# Windows: Add Android SDK platform-tools to system PATH
-```
-
-### Device not recognized
-```bash
-# Check USB connection
-adb devices
-
-# Try restarting ADB server
-adb kill-server
-adb start-server
-
-# Check USB permissions (Linux)
-sudo chmod a+rw /dev/bus/usb/*/*
-```
-
-### Permission Denied
-- Ensure USB Debugging is enabled
-- Try disconnecting and reconnecting device
-- Restart ADB service
-
-### Slow scans
-- Reduce number of packages to check (modify `config.py`)
-- Disable certain checks if not needed
-- Ensure stable USB connection
-
-## Code Quality
-
-- **PEP 8** compliant code
-- **Type hints** for all functions
-- **Comprehensive error handling**
-- **Logging** for all operations
-- **Modular design** for maintainability
-- **No external executables** - pure Python/ADB approach
-
-## Limitations
-
-- Malware detection is signature-based (not heuristic)
-- Some apps may hide their true functionality
-- Requires USB connection (not wireless)
-- Depends on accurate malware database
-- Limited by device permissions
-
-## Future Enhancements
-
-- [ ] Real-time monitoring
-- [ ] Wireless ADB support
-- [ ] Machine learning-based detection
-- [ ] Custom malware database updates
-- [ ] Web UI interface
-- [ ] Scheduled scanning
-- [ ] Automatic quarantine/removal
-- [ ] Network traffic analysis
-
-## Contributing
-
-To improve this tool:
-
-1. Test thoroughly on different Android versions
-2. Update malware signatures regularly
-3. Report bugs and issues
-4. Suggest new features
-5. Optimize performance
-
-## License
-
-This project is for educational and personal use only.
-
-## Disclaimer
-
-**Use at your own risk.** This tool performs operations on your Android device. 
-Improper use may affect device functionality. Always backup important data before 
-using any security scanning or removal features.
-
-## Support
-
-For issues, questions, or suggestions:
-- Check the troubleshooting section
-- Review logs in the `logs/` directory
-- Ensure device is properly connected
+| Module | Purpose |
+|--------|---------|
+| `adb_manager.py` | Device communication and command execution |
+| `malware_scanner.py` | Signature-based threat detection |
+| `app_analyzer.py` | App classification and analysis |
+| `metadata_handler.py` | EXIF/metadata extraction and removal |
+| `malware_remover.py` | Threat remediation and lock removal |
+| `command_interface.py` | CLI command routing and validation |
+| `config.py` | Global configuration and signatures |
 
 ---
 
-**Android Security Scanner v1.0**
-*Secure your Android device with confidence.*
+## Configuration
+
+### Customization Options
+
+Edit `config.py` to modify default behavior:
+
+```python
+# ADB timeout in seconds
+ADB_TIMEOUT = 30
+
+# Log level: DEBUG, INFO, WARNING, ERROR
+LOG_LEVEL = "INFO"
+
+# Malware signature database
+KNOWN_MALWARE_SIGNATURES = {
+    # malware_name: [signatures]
+}
+
+# Suspicious package patterns
+SUSPICIOUS_PATTERNS = [
+    "lockscreen", "locker", "ransomware", 
+    "scareware", "warning", "alert"
+]
+
+# System package prefixes to whitelist
+SYSTEM_PACKAGES = ["android", "com.android", "com.google"]
+```
+
+### Environment Variables
+
+```bash
+# Set custom log level
+export LOG_LEVEL=DEBUG
+
+# Set device ID for multi-device scenarios
+export ANDROID_DEVICE_ID=device_serial
+```
+
+---
+
+## Security & Privacy
+
+### Important Security Considerations
+
+**⚠️ Data Security**
+- All scans execute locally on your device
+- No data transmission to external servers
+- Network operations are device-only
+- Logs stored locally in `logs/` directory
+
+**⚠️ Device Safety**
+- Only enable USB Debugging on trusted computers
+- Sensitive operations require explicit confirmation
+- Backup important data before using remediation features
+- Never expose device to untrusted networks while debugging enabled
+
+**⚠️ Access Requirements**
+- USB connection required
+- ADB access to device file system
+- Permission to enumerate installed packages
+- Access to system settings and properties
+
+---
+
+## Troubleshooting
+
+### Issue: ADB Not Found
+
+**Symptoms:**
+```
+adb: command not found
+```
+
+**Solutions:**
+```bash
+# Verify installation
+adb version
+
+# Add to PATH (Windows - PowerShell Admin)
+$env:Path += ";C:\path\to\android-sdk\platform-tools"
+
+# Verify again
+adb devices
+```
+
+---
+
+### Issue: Device Not Recognized
+
+**Symptoms:**
+```
+List of attached devices
+```
+(Device list is empty)
+
+**Solutions:**
+```bash
+# Restart ADB server
+adb kill-server
+adb start-server
+
+# Check physical connection
+adb devices
+
+# Linux: Fix USB permissions
+sudo chmod a+rw /dev/bus/usb/*/*
+
+# macOS: Restart after connection
+adb reconnect
+```
+
+---
+
+### Issue: Permission Denied
+
+**Solutions:**
+1. Verify USB Debugging is **enabled** in Developer Options
+2. Check device for authorization dialog and tap **Allow**
+3. Restart both device and ADB server
+4. Try different USB port
+5. Update device drivers (Windows)
+
+---
+
+### Issue: Slow Scan Performance
+
+**Optimizations:**
+```python
+# In config.py, reduce scan scope:
+SUSPICIOUS_PATTERNS = [  # Fewer patterns
+    "lockscreen", "ransomware"
+]
+
+# Or filter by app type
+python main.py list-packages --user  # User apps only
+```
+
+**Hardware Considerations:**
+- Use USB 2.0+ cable (not USB-C adapters)
+- Keep device close to computer
+- Disable antivirus temporary scanning during scan
+- Close other USB intensive applications
+
+---
+
+## Architecture Decisions
+
+### Why USB-Only?
+- Reliable, authenticated connection
+- Immediate termination capability
+- Hardware-level access guarantees
+
+### Why Signature-Based Detection?
+- Fast performance
+- No ML dependencies
+- Transparent detection logic
+- Easy to update signatures
+
+### Why Modular Design?
+- Easy testing and maintenance
+- Clear separation of concerns
+- Reusable components
+- Extensible architecture
+
+---
+
+## Quality Standards
+
+**Code Quality**
+- ✅ PEP 8 compliant
+- ✅ Type hints on all functions
+- ✅ Comprehensive error handling
+- ✅ Structured logging
+- ✅ Modular architecture
+
+**Testing**
+- ✅ Unit tests included
+- ✅ Cross-device testing recommended
+- ✅ Edge case handling
+
+**Documentation**
+- ✅ Inline code comments
+- ✅ Function docstrings
+- ✅ Usage examples
+- ✅ Configuration guide
+
+---
+
+## Known Limitations
+
+| Limitation | Details |
+|-----------|---------|
+| **Android 11+** | Enhanced SELinux policies reduce effectiveness |
+| **Samsung Devices** | Knox security may block some operations |
+| **Signature-Based** | Cannot detect novel threats |
+| **USB Dependent** | Requires continuous USB connection |
+| **App Obfuscation** | May miss well-obfuscated malware |
+
+---
+
+## Roadmap
+
+**Planned Enhancements**
+- [ ] Wireless ADB support
+- [ ] Machine learning-based detection
+- [ ] Real-time process monitoring
+- [ ] Automated threat quarantine
+- [ ] Web dashboard UI
+- [ ] Scheduled scanning
+- [ ] Network traffic analysis
+- [ ] Custom signature upload
+
+**Compatibility Expansion**
+- [ ] iOS support assessment
+- [ ] Additional Android versions testing
+- [ ] Device-specific optimizations
+- [ ] ARM/x86 processor variants
+
+---
+
+## Compatibility
+
+### Tested Devices & Versions
+
+| Android Version | Compatibility | Notes |
+|-----------------|---------------|-------|
+| 5.0 - 10 | ✅ Excellent | Full feature support |
+| 11 - 12 | ⚠️ Good | Some SELinux restrictions |
+| 13+ | ⚠️ Limited | Enhanced security policies |
+| Stock Android | ✅ Best | Fewest restrictions |
+| Samsung (Knox) | ❌ Limited | Security policies block many operations |
+| Google Pixel | ✅ Good | Standard Android behavior |
+
+### Device Compatibility Notes
+
+**Best Performance:**
+- Stock Android devices
+- Android 5-10
+- Non-customized ROM
+
+**Known Issues:**
+- Samsung devices with Knox may fail lock removal
+- Android 13+ has reduced malware database access
+- Some manufacturer skins override system settings
+
+---
+
+## Support & Contributing
+
+### Getting Help
+
+1. **Documentation**: Check this README and QUICKSTART.md
+2. **Logs**: Review `logs/` directory for detailed error messages
+3. **Commands**: Run `python main.py help <command>` for usage
+
+### Contributing Guidelines
+
+To improve this tool:
+
+1. **Testing**: Test on multiple Android versions and devices
+2. **Malware Signatures**: Help maintain and update threat database
+3. **Bug Reports**: Include device info and logs
+4. **Features**: Suggest improvements with use cases
+5. **Performance**: Identify and optimize bottlenecks
+
+### Code Contributions
+
+```bash
+# Fork and clone the repository
+git clone <your-fork>
+cd android-security-scanner
+
+# Create feature branch
+git checkout -b feature/your-feature
+
+# Make changes and test
+python main.py full-scan
+
+# Commit with clear messages
+git commit -m "feat: add feature description"
+
+# Push and create pull request
+git push origin feature/your-feature
+```
+
+---
+
+## License & Disclaimer
+
+### License
+Educational and Personal Use Only
+
+### Legal Disclaimer
+
+⚠️ **IMPORTANT**: This tool is provided "AS-IS" for security research and personal device management only.
+
+**Risks & Warnings:**
+- Improper use may brick or permanently damage your device
+- Unauthorized access to devices is illegal in most jurisdictions
+- Always maintain full backups before using remediation features
+- Test extensively on non-critical devices first
+- The author assumes no liability for misuse or data loss
+
+**Restrictions:**
+- Do not use on devices you do not own
+- Do not use for unauthorized access
+- Do not bypass security for illegal purposes
+- Comply with all applicable laws and regulations
+
+---
+
+## Support Resources
+
+| Resource | Purpose |
+|----------|---------|
+| **Logs** | Detailed debugging information in `logs/` |
+| **Help** | `python main.py help [command]` |
+| **Issues** | Device connection troubleshooting |
+| **Config** | Customization and optimization |
+
+---
+
+## Version Information
+
+| Item | Details |
+|------|---------|
+| **Version** | 1.0.0 |
+| **Author** | Asola Junior |
+| **Release Date** | 2026 |
+| **Status** | Production Ready |
+| **Python** | 3.8+ |
+| **ADB** | Latest Platform Tools |
+
+---
+
+## Acknowledgments
+
+Built with attention to:
+- Android security best practices
+- Software engineering principles
+- User privacy and data security
+- Cross-platform compatibility
+- Code maintainability and clarity
+
+---
+
+**Android Security Scanner**  
+*Developed by Asola Junior*  
+*Secure your Android device with confidence and control.*

@@ -12,7 +12,7 @@ from exceptions import (
     ADBTimeoutException,
 )
 from utils import log_info, log_error, log_debug, log_warning
-from config import ADB_TIMEOUT, ADB_RETRY_ATTEMPTS
+from config import ADB_TIMEOUT, ADB_RETRY_ATTEMPTS, ADB_PATH
 
 
 class ADBManager:
@@ -42,13 +42,13 @@ class ADBManager:
         """
         try:
             result = subprocess.run(
-                ["adb", "version"],
+                [ADB_PATH, "version"],
                 capture_output=True,
                 timeout=5,
             )
             if result.returncode != 0:
                 raise ADBException("ADB version check failed")
-            log_info("ADB is properly installed")
+            log_info(f"ADB is properly installed at: {ADB_PATH}")
         except FileNotFoundError:
             raise ADBException(
                 "ADB is not installed. Please install Android SDK Platform Tools."
@@ -68,7 +68,7 @@ class ADBManager:
         
         try:
             result = subprocess.run(
-                ["adb", "devices"],
+                [ADB_PATH, "devices"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -111,7 +111,7 @@ class ADBManager:
             ADBTimeoutException: If command times out
             ADBConnectionException: If connection is lost
         """
-        adb_cmd = ["adb", "-s", self.device_id, "shell", command]
+        adb_cmd = [ADB_PATH, "-s", self.device_id, "shell", command]
         
         try:
             result = subprocess.run(
@@ -146,7 +146,7 @@ class ADBManager:
         """
         try:
             result = subprocess.run(
-                ["adb", "-s", self.device_id, "push", local_path, remote_path],
+                [ADB_PATH, "-s", self.device_id, "push", local_path, remote_path],
                 capture_output=True,
                 text=True,
                 timeout=ADB_TIMEOUT * 2,
@@ -173,7 +173,7 @@ class ADBManager:
         """
         try:
             result = subprocess.run(
-                ["adb", "-s", self.device_id, "pull", remote_path, local_path],
+                [ADB_PATH, "-s", self.device_id, "pull", remote_path, local_path],
                 capture_output=True,
                 text=True,
                 timeout=ADB_TIMEOUT * 2,

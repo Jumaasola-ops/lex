@@ -25,6 +25,31 @@ LOG_LEVEL = "INFO"
 ADB_TIMEOUT = 30  # seconds
 ADB_RETRY_ATTEMPTS = 3
 
+# ADB Path detection
+def _find_adb_path():
+    """Find ADB executable path from common locations."""
+    import shutil
+    
+    # Try to find in PATH first
+    adb_in_path = shutil.which('adb')
+    if adb_in_path:
+        return adb_in_path
+    
+    # Common Windows paths
+    common_paths = [
+        os.path.expanduser("~\\Downloads\\platform-tools-latest-windows\\adb.exe"),
+        os.path.expanduser("~\\AppData\\Local\\Android\\Sdk\\platform-tools\\adb.exe"),
+        "C:\\Android\\sdk\\platform-tools\\adb.exe",
+    ]
+    
+    for path in common_paths:
+        if os.path.exists(path):
+            return path
+    
+    return "adb"  # Fallback to system PATH
+
+ADB_PATH = _find_adb_path()
+
 # Malware Signatures Database (Production-ready signatures)
 KNOWN_MALWARE_SIGNATURES: Dict[str, List[str]] = {
     "Banking Trojans": [
