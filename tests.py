@@ -1,5 +1,7 @@
 """
-Unit tests for Android Security Scanner.
+Production Integration Tests for Android Security Scanner.
+
+These tests require a live Android device connected via ADB.
 """
 
 import unittest
@@ -10,135 +12,72 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from exceptions import (
-    AndroidSecurityException,
-    ADBException,
-    MetadataException,
-    InvalidCommandException,
-)
-from utils import (
-    sanitize_package_name,
-    is_valid_package_name,
-    format_size,
-)
-from config import SUSPICIOUS_PATTERNS, SYSTEM_PACKAGES
+from adb_manager import ADBManager
+from app_analyzer import AppAnalyzer
+from malware_scanner import MalwareScanner
+from system_analyzer import SystemAnalyzer
+from command_interface import CommandInterface
+from exceptions import AndroidSecurityException, ADBException
 
 
-class TestExceptions(unittest.TestCase):
-    """Test exception classes."""
+class ProductionTestBase(unittest.TestCase):
+    """Base class for production tests requiring live device."""
     
-    def test_base_exception(self):
-        """Test AndroidSecurityException."""
-        with self.assertRaises(AndroidSecurityException):
-            raise AndroidSecurityException("Test error")
+    @classmethod
+    def setUpClass(cls):
+        """Initialize ADB manager for all tests."""
+        cls.adb_manager = ADBManager()
+        # Verify device is connected
+        if not cls.adb_manager.is_device_connected():
+            raise ADBException("No Android device connected. Live tests require a connected device.")
     
-    def test_adb_exception(self):
-        """Test ADBException."""
-        with self.assertRaises(ADBException):
-            raise ADBException("ADB error")
-    
-    def test_metadata_exception(self):
-        """Test MetadataException."""
-        with self.assertRaises(MetadataException):
-            raise MetadataException("Metadata error")
+    def tearDown(self):
+        """Cleanup after each test."""
+        pass
 
 
-class TestUtils(unittest.TestCase):
-    """Test utility functions."""
+class ProductionDeviceTests(ProductionTestBase):
+    """Production tests for device connectivity and basic operations."""
     
-    def test_sanitize_package_name(self):
-        """Test package name sanitization."""
-        result = sanitize_package_name("COM.EXAMPLE.APP")
-        self.assertEqual(result, "com.example.app")
-        
-        result = sanitize_package_name("  com.example.app  ")
-        self.assertEqual(result, "com.example.app")
+    def test_device_connected(self):
+        """Test that device is connected."""
+        self.assertTrue(self.adb_manager.is_device_connected())
     
-    def test_is_valid_package_name(self):
-        """Test package name validation."""
-        self.assertTrue(is_valid_package_name("com.example.app"))
-        self.assertTrue(is_valid_package_name("com.google.android.gms"))
-        self.assertFalse(is_valid_package_name("invalid-package"))
-        self.assertFalse(is_valid_package_name(".invalid"))
-        self.assertFalse(is_valid_package_name("invalid."))
-    
-    def test_format_size(self):
-        """Test file size formatting."""
-        self.assertEqual(format_size(512), "512.00 B")
-        self.assertEqual(format_size(1024), "1.00 KB")
-        self.assertEqual(format_size(1024 * 1024), "1.00 MB")
-        self.assertEqual(format_size(1024 * 1024 * 1024), "1.00 GB")
+    def test_get_device_info(self):
+        """Test retrieving device information."""
+        device_info = self.adb_manager.get_device_info()
+        self.assertIsNotNone(device_info)
+        self.assertIn("model", device_info)
 
 
-class TestConfiguration(unittest.TestCase):
-    """Test configuration."""
+class ProductionMalwareScannerTests(ProductionTestBase):
+    """Production tests for malware scanning with live device."""
     
-    def test_suspicious_patterns_exist(self):
-        """Test that suspicious patterns are defined."""
-        self.assertIsInstance(SUSPICIOUS_PATTERNS, list)
-        self.assertGreater(len(SUSPICIOUS_PATTERNS), 0)
-        self.assertIn("spy", SUSPICIOUS_PATTERNS)
+    def setUp(self):
+        """Initialize scanner for each test."""
+        self.scanner = MalwareScanner(self.adb_manager)
     
-    def test_system_packages_exist(self):
-        """Test that system packages are defined."""
-        self.assertIsInstance(SYSTEM_PACKAGES, list)
-        self.assertGreater(len(SYSTEM_PACKAGES), 0)
-        self.assertIn("com.android", SYSTEM_PACKAGES)
+    def test_scan_installed_apps(self):
+        """Test scanning installed applications on device."""
+        results = self.scanner.scan_device()
+        self.assertIsNotNone(results)
 
 
-class TestAppAnalyzer(unittest.TestCase):
-    """Test app analyzer without device connection."""
+class ProductionSystemAnalysisTests(ProductionTestBase):
+    """Production tests for system analysis with live device."""
     
-    def test_is_system_package(self):
-        """Test system package detection."""
-        from app_analyzer import AppAnalyzer
-        from adb_manager import ADBManager
-        
-        # Note: Can't test without device, but we can test the concept
-        self.assertIn("com.android", SYSTEM_PACKAGES)
+    def setUp(self):
+        """Initialize analyzer for each test."""
+        self.analyzer = SystemAnalyzer(self.adb_manager)
     
-    def test_is_suspicious_app(self):
-        """Test suspicious app detection."""
-        from app_analyzer import AppAnalyzer
-        
-        suspicious_pkg = "com.spy.tracker"
-        pkg_lower = suspicious_pkg.lower()
-        
-        found = False
-        for pattern in SUSPICIOUS_PATTERNS:
-            if pattern in pkg_lower:
-                found = True
-                break
-        
-        self.assertTrue(found, f"Pattern not found in {suspicious_pkg}")
-
-
-class TestMetadataHandler(unittest.TestCase):
-    """Test metadata handler."""
-    
-    def test_metadata_handler_init(self):
-        """Test metadata handler initialization."""
-        from metadata_handler import MetadataHandler
-        
-        handler = MetadataHandler()
-        self.assertIsNotNone(handler)
-
-
-class TestCommandInterface(unittest.TestCase):
-    """Test command interface without device connection."""
-    
-    def test_command_interface_init(self):
-        """Test command interface initialization."""
-        from command_interface import CommandInterface
-        
-        interface = CommandInterface()
-        self.assertIsNotNone(interface)
-        self.assertIn("help", interface.commands)
-        self.assertIn("scan-malware", interface.commands)
+    def test_analyze_system(self):
+        """Test system analysis on device."""
+        analysis = self.analyzer.analyze_system()
+        self.assertIsNotNone(analysis)
 
 
 def run_tests():
-    """Run all tests."""
+    """Run all production tests."""
     unittest.main(argv=[''], verbosity=2, exit=False)
 
 

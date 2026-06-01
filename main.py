@@ -8,7 +8,7 @@ A comprehensive security and privacy tool for Android devices via USB connection
 import sys
 import argparse
 from command_interface import CommandInterface
-from utils import log_info, print_section_header, print_info
+from utils import log_info, print_section_header, print_info, display_banner
 from exceptions import AndroidSecurityException
 
 
@@ -60,10 +60,13 @@ Examples:
     parsed = parser.parse_args()
     
     try:
+        # Display banner on startup
+        display_banner()
+        
         # Create and initialize command interface
         interface = CommandInterface()
         
-        # Display banner
+        # Display command header
         if parsed.command != "help" or parsed.args:
             print_section_header("Android Security Scanner v1.0 - PRODUCTION READY")
         
