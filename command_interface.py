@@ -35,6 +35,7 @@ class CommandInterface:
             "scan-malware": self.cmd_scan_malware,
             "aggressive-scan": self.cmd_aggressive_scan,
             "remove-lockware": self.cmd_remove_lockware,
+            "remove-lock-screen": self.cmd_remove_lock_screen,
             "cripple-ransomware": self.cmd_cripple_ransomware,
             "cleanup-threats": self.cmd_cleanup_threats,
             "quarantine-app": self.cmd_quarantine_app,
@@ -428,6 +429,57 @@ class CommandInterface:
             
         except Exception as e:
             print_error(f"Lockware removal failed: {str(e)}")
+            return False
+    
+    def cmd_remove_lock_screen(self, args: List[str]) -> bool:
+        """
+        Attempt to remove malicious lock screen and unlock device.
+        Works against ransomware lock screens, device admin locks, and scareware.
+        
+        Command: remove-lock-screen
+        """
+        print_section_header("🔓 LOCK SCREEN REMOVAL - EMERGENCY UNLOCK")
+        
+        try:
+            print_warning("This will attempt to:")
+            print_info("  1. Clear malicious launcher")
+            print_info("  2. Remove lock screen admin privileges")
+            print_info("  3. Disable lock screen apps")
+            print_info("  4. Reset security settings")
+            print_info("  5. Reset display settings")
+            print_info("  6. Remove device owner restrictions")
+            print_info("  7. Force navigation to home")
+            print_info("  8. Check SIM lock status\n")
+            
+            # Confirm action
+            response = input("Proceed with lock screen removal? (type 'yes' to confirm): ").strip().lower()
+            if response != "yes":
+                print_info("\nOperation cancelled.\n")
+                return False
+            
+            # Execute lock screen removal
+            success, message = self.malware_remover.remove_lock_screen()
+            
+            if success:
+                print_section_header("✓ UNLOCK ATTEMPT COMPLETED")
+                print_success("\nNext steps:")
+                print_success("  1. Try pressing the Home button")
+                print_success("  2. Try touching the screen")
+                print_success("  3. Try swiping to unlock")
+                print_success("  4. If still locked, try:")
+                print_success("     - Recovery Mode: Hold Volume Down + Power")
+                print_success("     - Safe Mode: Power + Volume Down at startup\n")
+                return True
+            else:
+                print_error(f"\nUnlock attempt had issues: {message}")
+                print_warning("\nIf device is still locked, try:")
+                print_info("  • Recovery Mode: Hold Volume Down + Power (10 sec)")
+                print_info("  • Safe Mode: Restart and hold Volume Down + Power")
+                print_info("  • Factory Reset: Via recovery menu\n")
+                return False
+            
+        except Exception as e:
+            print_error(f"Lock screen removal error: {str(e)}")
             return False
     
     def cmd_cripple_ransomware(self, args: List[str]) -> bool:
