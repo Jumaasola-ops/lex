@@ -56,7 +56,27 @@ Android Security Scanner is a comprehensive command-line security and privacy an
 
 ## Installation
 
-### Step 1: Install Android SDK Platform Tools
+### Quick Install Command
+
+**Windows (PowerShell/CMD):**
+```powershell
+iex (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/Jumaasola-ops/lex/main/install.ps1')
+```
+
+**macOS/Linux (Bash):**
+```bash
+curl -sSL https://raw.githubusercontent.com/Jumaasola-ops/lex/main/install.sh | bash
+```
+
+That's it! The installer will handle everything automatically.
+
+---
+
+### Manual Installation Steps
+
+If you prefer to install manually, follow these steps:
+
+#### Step 1: Install Android SDK Platform Tools
 
 #### Windows
 ```powershell

@@ -1,6 +1,7 @@
 Pillow>=10.0.0
 pexpect>=4.8.0
 pywinpty>=2.0.0; sys_platform == 'win32'
+qrcode[pil]>=7.4.0
 
 # Reporting & PDF Generation
 weasyprint>=59.0; platform_system != 'Windows'

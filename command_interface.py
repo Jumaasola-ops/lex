@@ -50,6 +50,7 @@ class CommandInterface:
             "list-packages": self.cmd_list_packages,
             "app-info": self.cmd_app_info,
             "full-scan": self.cmd_full_scan,
+            "create-profile": self.cmd_create_profile,
             "help": self.cmd_help,
         }
         
@@ -929,6 +930,82 @@ class CommandInterface:
             all_passed = False
         
         return all_passed
+    
+    def cmd_create_profile(self, args: List[str]) -> bool:
+        """
+        Create comprehensive device profile with unique URL and QR code.
+        
+        Command: create-profile
+        Generates device profile with all specs, location, network info, and creates a shareable link with QR code.
+        """
+        print_section_header("DEVICE PROFILE GENERATION")
+        print_info("Creating comprehensive device profile...\n")
+        
+        try:
+            from device_profile_manager import DeviceProfileManager
+            from qr_generator import QRCodeGenerator
+            
+            # Generate profile
+            profile_manager = DeviceProfileManager(self.adb)
+            profile = profile_manager.generate_device_profile()
+            
+            if not profile:
+                print_error("Failed to generate device profile\n")
+                return False
+            
+            print_success(f"✓ Profile generated: {profile['profile_id']}\n")
+            
+            # Save profile JSON
+            profile_path = profile_manager.save_profile(profile)
+            if profile_path:
+                print_success(f"✓ Profile data saved: {profile_path}\n")
+            
+            # Generate unique URL
+            unique_url = profile_manager.generate_unique_url(profile)
+            print_section_header("Device Profile URL")
+            print(f"\n{unique_url}\n")
+            
+            # Save HTML report
+            report_path = profile_manager.save_report(profile)
+            if report_path:
+                print_success(f"✓ HTML report generated: {report_path}\n")
+            
+            # Generate QR code
+            qr_generator = QRCodeGenerator()
+            qr_path = qr_generator.generate_profile_qr(profile['profile_id'], unique_url)
+            
+            if qr_path:
+                print_success(f"✓ QR code generated: {qr_path}\n")
+                print_info("Scan the QR code with your device to view the profile\n")
+            
+            # Display profile summary
+            print_section_header("Profile Summary")
+            device_specs = profile.get('device_specs', {})
+            print(f"\nDevice: {device_specs.get('manufacturer', 'Unknown')} {device_specs.get('model', 'Unknown')}")
+            print(f"Android Version: {device_specs.get('version', 'Unknown')}")
+            print(f"Installed Apps: {profile.get('installed_apps_count', 0)}")
+            print(f"System Packages: {profile.get('system_packages_count', 0)}\n")
+            
+            # Connectivity info
+            connectivity = profile.get('connectivity', {})
+            print("Connectivity:")
+            print(f"  • WiFi: {'✓ Yes' if connectivity.get('wifi') else '✗ No'}")
+            print(f"  • Bluetooth: {'✓ Yes' if connectivity.get('bluetooth') else '✗ No'}")
+            print(f"  • 4G: {'✓ Yes' if connectivity.get('4g_capable') else '✗ No'}")
+            print(f"  • 5G: {'✓ Yes' if connectivity.get('5g_capable') else '✗ No'}\n")
+            
+            # Share information
+            print_section_header("Profile Sharing")
+            print(f"\n1. Share the unique URL: {unique_url}")
+            print(f"2. Share the QR code: {qr_path}")
+            print(f"3. Download the HTML report for offline viewing\n")
+            
+            print_success("✓ Device profile created successfully!\n")
+            return True
+            
+        except Exception as e:
+            print_error(f"Profile creation failed: {str(e)}")
+            return False
     
     def cmd_help(self, args: List[str]) -> bool:
         """
