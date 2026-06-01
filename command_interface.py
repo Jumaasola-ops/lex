@@ -4,6 +4,9 @@ Command interface for custom command handling.
 
 import sys
 import argparse
+import json
+from datetime import datetime
+from pathlib import Path
 from typing import Callable, Dict, Optional, List
 from adb_manager import ADBManager
 from malware_scanner import MalwareScanner
@@ -938,73 +941,96 @@ class CommandInterface:
         Command: create-profile
         Generates device profile with all specs, location, network info, and creates a shareable link with QR code.
         """
-        print_section_header("DEVICE PROFILE GENERATION")
-        print_info("Creating comprehensive device profile...\n")
+        print_section_header("WIRELESS DEVICE PROFILE COLLECTOR")
+        print_info("Starting wireless profile collection server...\n")
         
         try:
-            from device_profile_manager import DeviceProfileManager
+            from device_profile_server import DeviceProfileServer
             from qr_generator import QRCodeGenerator
+            import time
             
-            # Generate profile
-            profile_manager = DeviceProfileManager(self.adb)
-            profile = profile_manager.generate_device_profile()
+            # Initialize server
+            server = DeviceProfileServer(port=5000)
             
-            if not profile:
-                print_error("Failed to generate device profile\n")
-                return False
+            # Get local IP
+            local_ip = server.get_local_ip()
+            server_url = server.get_server_url(local_ip)
             
-            print_success(f"✓ Profile generated: {profile['profile_id']}\n")
+            print_success(f"✓ Server started on {local_ip}:5000\n")
             
-            # Save profile JSON
-            profile_path = profile_manager.save_profile(profile)
-            if profile_path:
-                print_success(f"✓ Profile data saved: {profile_path}\n")
-            
-            # Generate unique URL
-            unique_url = profile_manager.generate_unique_url(profile)
-            print_section_header("Device Profile URL")
-            print(f"\n{unique_url}\n")
-            
-            # Save HTML report
-            report_path = profile_manager.save_report(profile)
-            if report_path:
-                print_success(f"✓ HTML report generated: {report_path}\n")
+            # Start server in background thread
+            server_thread = server.start_server_thread()
+            time.sleep(2)  # Give server time to start
             
             # Generate QR code
             qr_generator = QRCodeGenerator()
-            qr_path = qr_generator.generate_profile_qr(profile['profile_id'], unique_url)
+            qr_path = qr_generator.generate_qr_code(server_url, f"wireless_profile_qr.png")
+            
+            # Display sharing information
+            print_section_header("SHARE THIS LINK WITH OTHER DEVICES")
+            print(f"\n📱 Share this URL with any device:\n")
+            print(f"   {server_url}\n")
             
             if qr_path:
-                print_success(f"✓ QR code generated: {qr_path}\n")
-                print_info("Scan the QR code with your device to view the profile\n")
+                print(f"📲 Or scan this QR code: {qr_path}\n")
             
-            # Display profile summary
-            print_section_header("Profile Summary")
-            device_specs = profile.get('device_specs', {})
-            print(f"\nDevice: {device_specs.get('manufacturer', 'Unknown')} {device_specs.get('model', 'Unknown')}")
-            print(f"Android Version: {device_specs.get('version', 'Unknown')}")
-            print(f"Installed Apps: {profile.get('installed_apps_count', 0)}")
-            print(f"System Packages: {profile.get('system_packages_count', 0)}\n")
+            print_section_header("IMPORTANT INSTRUCTIONS")
+            print_info("\n1. Open the link on ANY device (phone, tablet, etc.)")
+            print_info("2. Allow location/geolocation when prompted")
+            print_info("3. The device will automatically:")
+            print_info("   ✓ Collect GPS coordinates")
+            print_info("   ✓ Gather device specifications")
+            print_info("   ✓ Capture network information")
+            print_info("   ✓ Detect hardware capabilities")
+            print_info("   ✓ Determine screen resolution")
+            print_info("   ✓ Record connection type (4G/5G/WiFi)")
+            print_info("4. Profile will be submitted automatically\n")
             
-            # Connectivity info
-            connectivity = profile.get('connectivity', {})
-            print("Connectivity:")
-            print(f"  • WiFi: {'✓ Yes' if connectivity.get('wifi') else '✗ No'}")
-            print(f"  • Bluetooth: {'✓ Yes' if connectivity.get('bluetooth') else '✗ No'}")
-            print(f"  • 4G: {'✓ Yes' if connectivity.get('4g_capable') else '✗ No'}")
-            print(f"  • 5G: {'✓ Yes' if connectivity.get('5g_capable') else '✗ No'}\n")
+            print_section_header("DEVICE PROFILES RECEIVED")
+            print_info("Listening for incoming device profiles...")
+            print_info("Press Ctrl+C to stop and view results\n")
             
-            # Share information
-            print_section_header("Profile Sharing")
-            print(f"\n1. Share the unique URL: {unique_url}")
-            print(f"2. Share the QR code: {qr_path}")
-            print(f"3. Download the HTML report for offline viewing\n")
-            
-            print_success("✓ Device profile created successfully!\n")
-            return True
+            # Keep server running and display received profiles
+            try:
+                while True:
+                    time.sleep(1)
+                    if server.received_profiles:
+                        print("\n" + "="*60)
+                        print(f"✓ PROFILES RECEIVED: {len(server.received_profiles)}")
+                        print("="*60 + "\n")
+                        server.display_profiles()
+                        print()
+            except KeyboardInterrupt:
+                print("\n\n" + "="*60)
+                print("STOPPING SERVER")
+                print("="*60 + "\n")
+                
+                # Display final summary
+                if server.received_profiles:
+                    print_section_header("FINAL PROFILE SUMMARY")
+                    server.display_profiles()
+                    
+                    # Save summary
+                    summary_path = Path("reports/profiles/wireless_summary.json")
+                    summary_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(summary_path, 'w') as f:
+                        json.dump({
+                            'server_url': server_url,
+                            'profiles_count': len(server.received_profiles),
+                            'profiles': server.received_profiles,
+                            'timestamp': datetime.now().isoformat()
+                        }, f, indent=2)
+                    
+                    print_success(f"\n✓ Summary saved to: {summary_path}\n")
+                else:
+                    print_warning("⚠ No device profiles received\n")
+                
+                return True
             
         except Exception as e:
-            print_error(f"Profile creation failed: {str(e)}")
+            print_error(f"Profile server error: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def cmd_help(self, args: List[str]) -> bool:
