@@ -1,3 +1,11 @@
 Pillow>=10.0.0
 pexpect>=4.8.0
 pywinpty>=2.0.0; sys_platform == 'win32'
+
+# Testing & Quality Assurance
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0

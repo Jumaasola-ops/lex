@@ -1,0 +1,55 @@
+name: Update Malware Signatures
+
+on:
+  schedule:
+    # Update signatures every Sunday at 3 AM UTC
+    - cron: "0 3 * * 0"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-signatures:
+    runs-on: ubuntu-latest
+    name: Update Malware Signatures
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Update signatures
+        run: |
+          python -c "
+          from signature_manager import SignatureUpdater
+          updater = SignatureUpdater()
+          success, msg = updater.perform_update()
+          print(f'Update result: {msg}')
+          if not success:
+              exit(1)
+          "
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "bot@example.com"
+          git config --local user.name "Signature Update Bot"
+          git add malware_db/
+          git diff --quiet && git diff --staged --quiet || (
+            git commit -m "⚙️ Auto-update: Malware signatures [skip ci]" &&
+            git push
+          )
+
+      - name: Create PR if changes
+        if: success()
+        uses: peter-evans/create-pull-request@v4
+        with:
+          commit-message: "Auto-update: Malware signatures"
+          title: "Auto-update: Malware signatures"
+          body: "Weekly malware signature database update"
+          branch: auto/signature-update
