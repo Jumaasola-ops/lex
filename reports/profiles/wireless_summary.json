@@ -1,11 +1,12 @@
 {
   "server_url": "http://192.168.0.103:5000",
+  "public_url": null,
   "profiles_count": 1,
   "profiles": {
-    "0aed6be8": {
-      "profile_id": "0aed6be8",
+    "85ffe769": {
+      "profile_id": "85ffe769",
       "device_id": "device-jqcf6q94d",
-      "timestamp": "2026-06-01T23:56:18.186Z",
+      "timestamp": "2026-06-02T17:38:20.257Z",
       "remote_ip": "192.168.0.103",
       "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
       "device_model": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
@@ -20,8 +21,8 @@
       },
       "connection": {
         "effective_type": "4g",
-        "downlink": 4.15,
-        "rtt": 300,
+        "downlink": 3.1,
+        "rtt": 100,
         "save_data": false
       },
       "location": {
@@ -44,5 +45,5 @@
       "timezone": "America/Los_Angeles"
     }
   },
-  "timestamp": "2026-06-01T17:18:53.159715"
+  "timestamp": "2026-06-02T11:20:19.962655"
 }

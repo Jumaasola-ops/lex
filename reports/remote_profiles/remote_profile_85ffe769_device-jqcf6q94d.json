@@ -1,13 +1,12 @@
 {
-  "profile_id": "3e56806e",
+  "profile_id": "85ffe769",
   "device_id": "device-jqcf6q94d",
-  "timestamp": "2026-06-01T23:45:39.753Z",
+  "timestamp": "2026-06-02T17:38:20.257Z",
   "remote_ip": "192.168.0.103",
   "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
   "device_model": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
   "platform": "Win32",
   "language": "en-US",
-  "languages": ["en-US", "en"],
   "online": true,
   "screen_resolution": {
     "width": 1280,
@@ -17,8 +16,8 @@
   },
   "connection": {
     "effective_type": "4g",
-    "downlink": 2.95,
-    "rtt": 150,
+    "downlink": 3.1,
+    "rtt": 100,
     "save_data": false
   },
   "location": {

@@ -966,7 +966,18 @@ class CommandInterface:
             public_url = None
             try:
                 from pyngrok import ngrok as pyngrok_ngrok
+                from pyngrok.conf import PyngrokConfig
                 import os
+                
+                # Configure pyngrok to use system ngrok from Microsoft Store
+                ngrok_path = os.path.join(os.path.dirname(__file__), "ngrok.exe")
+                
+                # If local copy doesn't exist, use system path
+                if not os.path.exists(ngrok_path):
+                    ngrok_path = r"C:\Users\hp\AppData\Local\Microsoft\WindowsApps\ngrok.exe"
+                
+                pyngrok_config = PyngrokConfig(ngrok_path=ngrok_path)
+                pyngrok_ngrok.set_config(pyngrok_config)
                 
                 # Check if ngrok authtoken is available
                 ngrok_token = os.getenv('NGROK_AUTHTOKEN')
