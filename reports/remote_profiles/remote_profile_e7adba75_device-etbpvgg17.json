@@ -1,0 +1,42 @@
+{
+  "profile_id": "e7adba75",
+  "device_id": "device-etbpvgg17",
+  "timestamp": "2026-06-02T00:36:28.418Z",
+  "remote_ip": "127.0.0.1",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.1 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36",
+  "device_model": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.122.1 Chrome/142.0.7444.265 Electron/39.8.8 Safari/537.36",
+  "platform": "Win32",
+  "language": "en-US",
+  "online": true,
+  "screen_resolution": {
+    "width": 1280,
+    "height": 1024,
+    "pixel_depth": 24,
+    "color_depth": 24
+  },
+  "device_memory_gb": 8,
+  "connection": {
+    "effective_type": "3g",
+    "downlink": 0.4,
+    "rtt": 450,
+    "save_data": false
+  },
+  "location": {
+    "error": "User denied Geolocation",
+    "code": 1
+  },
+  "capabilities": {
+    "cookies_enabled": true,
+    "touch_enabled": false,
+    "webgl_enabled": true,
+    "service_worker": true,
+    "notification": true
+  },
+  "hardware": {
+    "vibration": true,
+    "battery": true,
+    "camera": true,
+    "microphone": true
+  },
+  "timezone": "America/Los_Angeles"
+}

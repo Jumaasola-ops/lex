@@ -11,7 +11,6 @@ from command_interface import CommandInterface
 from utils import log_info, print_section_header, print_info, display_banner
 from exceptions import AndroidSecurityException
 
-
 def main() -> int:
     """
     Main entry point for Android Security Scanner.

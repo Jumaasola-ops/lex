@@ -962,23 +962,71 @@ class CommandInterface:
             server_thread = server.start_server_thread()
             time.sleep(2)  # Give server time to start
             
-            # Generate QR code
+            # Setup ngrok for public access
+            public_url = None
+            try:
+                from pyngrok import ngrok as pyngrok_ngrok
+                import os
+                
+                # Check if ngrok authtoken is available
+                ngrok_token = os.getenv('NGROK_AUTHTOKEN')
+                if ngrok_token:
+                    print_info("🌐 Connecting to ngrok for public internet access...\n")
+                    pyngrok_ngrok.set_auth_token(ngrok_token)
+                    public_url = pyngrok_ngrok.connect(5000, "http")
+                    public_url = str(public_url).replace('http://', '').split(' ')[0]
+                    public_url = f"http://{public_url}"
+                    print_success(f"✓ Public URL established: {public_url}\n")
+                else:
+                    print_warning("⚠ NGROK_AUTHTOKEN not set. Using local network only.\n")
+                    print_info("  To enable internet access:\n")
+                    print_info("  1. Sign up at https://dashboard.ngrok.com\n")
+                    print_info("  2. Get your authtoken\n")
+                    print_info("  3. Set environment variable: $env:NGROK_AUTHTOKEN='your_token'\n")
+            except Exception as e:
+                print_warning(f"⚠ Ngrok setup failed: {str(e)}\n")
+                print_info("  Continuing with local network access only.\n")
+            
+            # Generate QR codes
             qr_generator = QRCodeGenerator()
-            qr_path = qr_generator.generate_qr_code(server_url, f"wireless_profile_qr.png")
+            qr_path = qr_generator.generate_qr_code(server_url, "wireless_profile_qr_local.png")
+            qr_path_public = None
             
             # Display sharing information
             print_section_header("SHARE THIS LINK WITH OTHER DEVICES")
-            print(f"\n📱 Share this URL with any device:\n")
+            
+            # Local network URL
+            print(f"\n📱 Local Network (same WiFi):\n")
             print(f"   {server_url}\n")
             
             if qr_path:
-                print(f"📲 Or scan this QR code: {qr_path}\n")
+                print(f"   📲 QR Code: {qr_path}\n")
+            
+            # Public URL if available
+            if public_url:
+                print(f"\n🌐 Internet Access (anywhere in world):\n")
+                print(f"   {public_url}\n")
+                qr_path_public = qr_generator.generate_qr_code(public_url, "wireless_profile_qr_public.png")
+                if qr_path_public:
+                    print(f"   📲 QR Code: {qr_path_public}\n")
+            else:
+                print()
+
             
             print_section_header("LIVE LOCATION DASHBOARD")
+            
+            # Local dashboard
             dashboard_url = f"{server_url}/dashboard"
-            print(f"\n📊 Monitor device locations in real-time:\n")
+            print(f"\n📊 Local Dashboard:\n")
             print(f"   {dashboard_url}\n")
-            print_info("Open this URL on your computer to see a live map of all connected devices with GPS coordinates.\n")
+            
+            # Public dashboard
+            if public_url:
+                public_dashboard = f"{public_url}/dashboard"
+                print(f"\n🌐 Public Dashboard:\n")
+                print(f"   {public_dashboard}\n")
+            
+            print_info("Open the dashboard on your computer to see a live map of all connected devices with GPS coordinates.\n")
             
             print_section_header("IMPORTANT INSTRUCTIONS")
             print_info("\n1. Open the link on ANY device (phone, tablet, etc.)")
@@ -1022,6 +1070,7 @@ class CommandInterface:
                     with open(summary_path, 'w') as f:
                         json.dump({
                             'server_url': server_url,
+                            'public_url': public_url,
                             'profiles_count': len(server.received_profiles),
                             'profiles': server.received_profiles,
                             'timestamp': datetime.now().isoformat()
