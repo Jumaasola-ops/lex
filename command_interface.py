@@ -54,6 +54,9 @@ class CommandInterface:
             "app-info": self.cmd_app_info,
             "full-scan": self.cmd_full_scan,
             "create-profile": self.cmd_create_profile,
+            "scan-no-debug": self.cmd_scan_no_debug,
+            "disable-app": self.cmd_disable_app,
+            "remove-securityplugin": self.cmd_remove_securityplugin,
             "help": self.cmd_help,
         }
         
@@ -113,7 +116,7 @@ class CommandInterface:
             return False
         
         try:
-            if command not in ["help", "create-profile"] and not self.adb:
+            if command not in ["help", "create-profile", "scan-no-debug"] and not self.adb:
                 if not self.initialize():
                     return False
             
@@ -1097,6 +1100,284 @@ class CommandInterface:
             print_error(f"Profile server error: {str(e)}")
             import traceback
             traceback.print_exc()
+            return False
+    
+    def cmd_scan_no_debug(self, args: List[str]) -> bool:
+        """
+        Scan Android device WITHOUT requiring debug mode or developer options.
+        Uses MTP, Fastboot, and alternative methods.
+        
+        Command: scan-no-debug [method]
+        Methods: mtp, fastboot, storage, all (default: all)
+        """
+        from non_debug_scanner import NonDebugScanner, ScanMethod
+        
+        print_section_header("NON-DEBUG ANDROID SCANNER")
+        print_info("Scanning without requiring debug mode or developer options...\n")
+        
+        try:
+            # Determine method to use
+            method = None
+            if args:
+                method_name = args[0].lower()
+                method_map = {
+                    "mtp": ScanMethod.MTP,
+                    "fastboot": ScanMethod.FASTBOOT,
+                    "storage": ScanMethod.USB_STORAGE,
+                    "all": None,
+                }
+                method = method_map.get(method_name)
+            
+            # Run scanner
+            scanner = NonDebugScanner()
+            results = scanner.scan_without_debug(method)
+            
+            # Display results
+            scanner.print_summary(results)
+            
+            if results.get("threats_found"):
+                print("\nTo disable detected threats, use:")
+                print("  android-security disable-app <package_name>\n")
+            
+            return results["success"]
+            
+        except Exception as e:
+            print_error(f"Non-debug scan failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def cmd_disable_app(self, args: List[str]) -> bool:
+        """
+        Disable/uninstall app detected by non-debug scan.
+        Works on USB-connected devices without debug mode.
+        
+        Command: disable-app <package_name>
+        """
+        if not args:
+            raise InvalidCommandException(
+                "Usage: disable-app <package_name>\n"
+                "Example: disable-app com.malicious.app"
+            )
+        
+        package_name = args[0]
+        print_section_header(f"DISABLE APP: {package_name}")
+        
+        try:
+            from non_debug_scanner import NonDebugScanner
+            
+            scanner = NonDebugScanner()
+            
+            # First, try MTP method (no debug required)
+            print_info("Attempting to disable app via USB file system...\n")
+            success = scanner.disable_app_via_mtp(package_name)
+            
+            if success:
+                print_success(f"✓ App {package_name} has been disabled!\n")
+                print_info("The app data has been quarantined and the app cannot run.")
+                print_info("To restore, connect your device and restore from backup.\n")
+                return True
+            
+            # If MTP fails, try ADB if available
+            print_info("\nMTP method unavailable. Attempting via ADB...")
+            try:
+                if not self.adb:
+                    if not self.initialize():
+                        print_warning("\nADB debugging not enabled.")
+                        print_info("To enable debugging:")
+                        print_info("  1. Go to Settings > About Phone")
+                        print_info("  2. Tap Build Number 7 times")
+                        print_info("  3. Go to Developer Options")
+                        print_info("  4. Enable USB Debugging\n")
+                        return False
+                
+                # Try ADB uninstall
+                result = self.adb.execute(f"pm uninstall --user 0 {package_name}")
+                if "Success" in result or result.returncode == 0:
+                    print_success(f"✓ App {package_name} uninstalled successfully!\n")
+                    return True
+                else:
+                    # Try disabling instead
+                    self.adb.execute(f"pm disable-user {package_name}")
+                    print_success(f"✓ App {package_name} disabled successfully!\n")
+                    return True
+            except:
+                pass
+            
+            print_error(f"✗ Could not disable {package_name}")
+            print_info("\nNote: App disabling requires either:")
+            print_info("  1. USB debugging enabled, OR")
+            print_info("  2. Manual deletion via file manager after connecting as storage\n")
+            return False
+            
+        except Exception as e:
+            print_error(f"Error disabling app: {str(e)}")
+            return False
+    
+    def cmd_remove_securityplugin(self, args: List[str]) -> bool:
+        """
+        Remove SecurityPlugin lockware (ransomware/lock app).
+        
+        This command forcefully removes the SecurityPlugin app that locks the device.
+        It handles:
+        - Finding the app even if hidden
+        - Removing device admin privileges
+        - Force-stopping the app
+        - Uninstalling/disabling it
+        
+        Command: remove-securityplugin
+        """
+        print_section_header("SecurityPlugin Lockware Removal")
+        print_warning("⚠️  CRITICAL: Attempting to remove SecurityPlugin ransomware...\n")
+        
+        try:
+            # Step 1: Check if SecurityPlugin is installed
+            print_info("[Step 1] Searching for SecurityPlugin app...")
+            all_packages = self.adb.get_installed_packages()
+            
+            securityplugin_packages = [
+                pkg for pkg in all_packages 
+                if 'securityplugin' in pkg.lower() or 
+                   'security' in pkg.lower() and 'plugin' in pkg.lower()
+            ]
+            
+            if not securityplugin_packages:
+                print_error("SecurityPlugin not found on device")
+                print_info("Searching for similar suspicious apps...")
+                
+                # Search for apps with suspicious characteristics
+                suspicious_apps = [
+                    pkg for pkg in all_packages
+                    if any(keyword in pkg.lower() for keyword in 
+                           ['lock', 'locker', 'security', 'protect', 'guard', 'ransomware'])
+                ]
+                
+                if suspicious_apps:
+                    print_warning(f"Found {len(suspicious_apps)} suspicious app(s):")
+                    for app in suspicious_apps[:10]:
+                        print_info(f"  • {app}")
+                    print_info("\nUse: remove-app <package_name> to remove a specific app")
+                return False
+            
+            print_success(f"✓ Found {len(securityplugin_packages)} matching package(s)")
+            for pkg in securityplugin_packages:
+                print_info(f"  • {pkg}")
+            
+            # Step 2: Remove device admin privileges
+            print_info("\n[Step 2] Removing device admin privileges...")
+            for pkg in securityplugin_packages:
+                try:
+                    # Remove device admin
+                    self.adb.execute_command(
+                        f"dpm remove-active-admin --user 0 {pkg}/{pkg}.AdminReceiver"
+                    )
+                    self.adb.execute_command(
+                        f"dpm remove-active-admin {pkg}/.AdminReceiver"
+                    )
+                    # Try various admin receiver names
+                    for receiver in ['.Admin', '.AdminReceiver', '.DeviceAdminReceiver', '.Receiver']:
+                        self.adb.execute_command(
+                            f"dpm remove-active-admin {pkg}/{pkg}{receiver}"
+                        )
+                    print_success(f"  ✓ Device admin removed for {pkg}")
+                except Exception as e:
+                    print_warning(f"  ⚠️  Could not remove device admin: {str(e)}")
+            
+            # Step 3: Force-stop the app
+            print_info("\n[Step 3] Force-stopping the app...")
+            for pkg in securityplugin_packages:
+                try:
+                    returncode, _, _ = self.adb.execute_command(f"am force-stop {pkg}")
+                    if returncode == 0:
+                        print_success(f"  ✓ Force-stopped {pkg}")
+                    else:
+                        print_warning(f"  ⚠️  Could not force-stop {pkg}")
+                except Exception as e:
+                    print_warning(f"  ⚠️  Error force-stopping: {str(e)}")
+            
+            # Step 4: Uninstall the app
+            print_info("\n[Step 4] Uninstalling the app...")
+            uninstalled = []
+            failed = []
+            
+            for pkg in securityplugin_packages:
+                try:
+                    # Try standard uninstall
+                    returncode, output, _ = self.adb.execute_command(f"pm uninstall -k {pkg}")
+                    if returncode == 0 and "Success" in output:
+                        print_success(f"  ✓ Uninstalled {pkg}")
+                        uninstalled.append(pkg)
+                    else:
+                        # Try with --user flag
+                        returncode, output, _ = self.adb.execute_command(
+                            f"pm uninstall --user 0 {pkg}"
+                        )
+                        if returncode == 0:
+                            print_success(f"  ✓ Uninstalled {pkg}")
+                            uninstalled.append(pkg)
+                        else:
+                            # If uninstall fails, try to disable
+                            print_warning(f"  ⚠️  Uninstall failed, attempting to disable...")
+                            returncode, _, _ = self.adb.execute_command(
+                                f"pm disable-user {pkg}"
+                            )
+                            if returncode == 0:
+                                print_success(f"  ✓ Disabled {pkg}")
+                                uninstalled.append(pkg)
+                            else:
+                                failed.append(pkg)
+                except Exception as e:
+                    print_error(f"  ✗ Error uninstalling {pkg}: {str(e)}")
+                    failed.append(pkg)
+            
+            # Step 5: Verify removal
+            print_info("\n[Step 5] Verifying removal...")
+            import time
+            time.sleep(2)  # Wait for uninstall to complete
+            
+            remaining_packages = self.adb.get_installed_packages()
+            still_installed = [
+                pkg for pkg in securityplugin_packages
+                if pkg in remaining_packages
+            ]
+            
+            # Final Report
+            print_section_header("SecurityPlugin Removal Report")
+            
+            if not still_installed and uninstalled:
+                print_success("\n✓✓✓ SUCCESS! SecurityPlugin has been COMPLETELY REMOVED! ✓✓✓\n")
+                print_success(f"Successfully removed {len(uninstalled)} app(s):")
+                for pkg in uninstalled:
+                    print_success(f"  ✓ {pkg}")
+                print_success("\nYour device should now be unlocked and functional!\n")
+                return True
+            elif uninstalled:
+                print_warning(f"\n⚠️  Partially successful:\n")
+                print_success(f"Removed: {len(uninstalled)} app(s)")
+                for pkg in uninstalled:
+                    print_success(f"  ✓ {pkg}")
+                if still_installed:
+                    print_error(f"\nStill installed: {len(still_installed)} app(s)")
+                    for pkg in still_installed:
+                        print_error(f"  ✗ {pkg}")
+                    print_info("\n⚠️  Try restarting your device or using the aggressive removal option.")
+                return len(still_installed) == 0
+            else:
+                print_error("\n✗ FAILED: Could not remove SecurityPlugin\n")
+                if failed:
+                    print_error(f"Failed to remove {len(failed)} app(s):")
+                    for pkg in failed:
+                        print_error(f"  ✗ {pkg}")
+                print_warning("\nTroubleshooting steps:")
+                print_info("1. Make sure USB debugging is ENABLED on your device")
+                print_info("2. Ensure your device is connected via USB")
+                print_info("3. Try running the command again")
+                print_info("4. If still failing, try: python main.py remove-lockware")
+                return False
+                
+        except Exception as e:
+            print_error(f"\n✗ ERROR: {str(e)}")
+            log_error(f"SecurityPlugin removal failed: {str(e)}")
             return False
     
     def cmd_help(self, args: List[str]) -> bool:
